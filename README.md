@@ -1,8 +1,8 @@
-# Hush
+# Hush App
 
 **Private notes that are encrypted before they ever touch your disk.**
 
-Hush is a single-file notes app with folders, Markdown, attachments, and a built-in space to think out loud about each note. No account, no server, no tracking, no build step. Open the page, set a passphrase, write.
+Hush App is a single-file notes app with folders, Markdown, attachments, and a built-in space to think out loud about each note. No account, no server, no tracking, no build step. Open the page, set a passphrase, write.
 
 **Try it:** https://mkwalid.github.io/hush-notes/
 

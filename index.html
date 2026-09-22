@@ -1,0 +1,1057 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Hush App: encrypted notes</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400..700&family=Literata:ital,opsz,wght@0,7..72,400;0,7..72,600;1,7..72,400&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#F3F5F9; --panel:#FFFFFF; --panel2:#EBEEF5; --ink:#161C2B; --muted:#5F6B85; --line:#DDE2EE;
+  --accent:#3446D8; --accent-ink:#FFFFFF; --accent-soft:#E3E7FD; --ok:#12805F; --warn:#B26A00; --danger:#C0392B;
+  --shadow:0 18px 48px rgba(22,28,43,.14);
+  --ui:'Bricolage Grotesque',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;
+  --doc:'Literata',Georgia,'Times New Roman',serif;
+  --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0E111A; --panel:#151A26; --panel2:#1C2232; --ink:#E7EAF3; --muted:#9099B2; --line:#262D42;
+    --accent:#8C9BFF; --accent-ink:#0E111A; --accent-soft:#232A52; --ok:#4FD3A7; --warn:#E5A445; --danger:#FF8A7A;
+    --shadow:0 18px 48px rgba(0,0,0,.5);
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0E111A; --panel:#151A26; --panel2:#1C2232; --ink:#E7EAF3; --muted:#9099B2; --line:#262D42;
+  --accent:#8C9BFF; --accent-ink:#0E111A; --accent-soft:#232A52; --ok:#4FD3A7; --warn:#E5A445; --danger:#FF8A7A;
+  --shadow:0 18px 48px rgba(0,0,0,.5);
+}
+*,*::before,*::after{box-sizing:inherit}
+[hidden]{display:none!important}
+html{scroll-padding-top:env(safe-area-inset-top,0px);height:100%}
+body{height:100%;margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 var(--ui);-webkit-font-smoothing:antialiased}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.ic{width:18px;height:18px;flex:none}
+.faint{color:var(--muted)}
+
+/* buttons */
+.primary,.soft,.ghost{border:0;border-radius:10px;padding:10px 16px;font-weight:600;transition:filter .15s,background .15s}
+.primary{background:var(--accent);color:var(--accent-ink)}
+.primary:hover{filter:brightness(1.08)}
+.primary:disabled{opacity:.6;cursor:wait}
+.soft{background:var(--panel2);color:var(--ink)}
+.soft:hover{background:var(--accent-soft)}
+.ghost{background:transparent;color:var(--muted);padding:8px 10px}
+.sm{padding:7px 12px;font-size:13.5px;border-radius:9px}
+.danger-btn{background:var(--danger);color:#fff;border:0;border-radius:10px;padding:10px 16px;font-weight:600}
+.icon{display:inline-grid;place-items:center;width:36px;height:36px;border:0;border-radius:10px;background:transparent;color:var(--muted);flex:none}
+.icon:hover{background:var(--panel2);color:var(--ink)}
+.icon:disabled,.soft:disabled{opacity:.4;cursor:default}
+.link{background:none;border:0;padding:0;color:var(--accent);text-decoration:underline;text-underline-offset:3px;font-size:13.5px}
+input[type=text],input[type=password],input[type=search],select,textarea.field{width:100%;border:1px solid var(--line);background:var(--bg);border-radius:10px;padding:10px 12px}
+input:focus,select:focus,textarea:focus{border-color:var(--accent)}
+
+/* lock screen */
+.lock{position:fixed;inset:0;display:grid;place-items:center;padding:calc(24px + env(safe-area-inset-top,0px)) 24px calc(24px + env(safe-area-inset-bottom,0px));background:var(--bg);overflow:auto;z-index:20}
+#cipherBg{position:absolute;inset:0;margin:0;padding:12px;overflow:hidden;font:12.5px/1.55 var(--mono);color:var(--accent);opacity:.16;white-space:pre;user-select:none;pointer-events:none;
+  -webkit-mask-image:radial-gradient(ellipse at center,transparent 18%,#000 85%);mask-image:radial-gradient(ellipse at center,transparent 18%,#000 85%)}
+.lock-card{position:relative;width:min(430px,100%);background:var(--panel);border:1px solid var(--line);border-radius:22px;padding:32px 30px 26px;box-shadow:var(--shadow)}
+.mark{display:grid;place-items:center;width:46px;height:46px;border-radius:14px;background:var(--accent-soft);color:var(--accent);margin-bottom:18px}
+.mark .ic{width:22px;height:22px}
+.lock h1{margin:0 0 6px;font-size:28px;line-height:1.15;letter-spacing:-.02em;min-height:2.3em}
+.lock .lead{margin:0 0 20px;color:var(--muted)}
+.field{margin-bottom:14px}
+.field label{display:block;font-size:13.5px;font-weight:600;margin-bottom:6px}
+.pwrow{display:flex;gap:6px}
+.msg{min-height:1.4em;margin:0 0 10px;color:var(--danger);font-size:13.5px}
+.warnbox{background:var(--panel2);border-radius:12px;padding:12px 14px;font-size:13.5px;color:var(--muted);margin:0 0 16px}
+.warnbox b{color:var(--ink)}
+.lock .primary{width:100%;padding:12px}
+.lock-links{display:flex;justify-content:space-between;gap:12px;margin-top:16px;flex-wrap:wrap}
+#forgotBox{font-size:13.5px;color:var(--muted);margin:14px 0 0}
+
+/* app shell */
+#app{height:100%;display:flex;min-height:0}
+#side{width:300px;flex:none;display:flex;flex-direction:column;background:var(--panel);border-right:1px solid var(--line);min-height:0;transition:transform .22s ease}
+.side-head{display:flex;align-items:center;justify-content:space-between;padding:14px 12px 6px 18px}
+.brand{font-size:22px;font-weight:700;letter-spacing:-.03em}
+.search{position:relative;margin:8px 12px}
+.search .ic{position:absolute;left:11px;top:50%;transform:translateY(-50%);color:var(--muted);pointer-events:none}
+.search input{padding-left:36px}
+.side-actions{display:flex;gap:8px;padding:2px 12px 10px}
+.side-actions .primary{flex:1}
+#tree{flex:1;overflow:auto;padding:2px 8px 12px}
+.side-foot{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:10px 12px;border-top:1px solid var(--line)}
+.pad{padding:12px}
+.row{display:flex;align-items:center;gap:2px;border-radius:9px;padding-left:calc(6px + var(--d,0) * 16px)}
+.row:hover{background:var(--panel2)}
+.rowmain{flex:1;min-width:0;display:flex;align-items:center;gap:8px;background:none;border:0;padding:8px 6px;text-align:left}
+.row .nm{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600;font-size:14px}
+.row .ct{font-size:12px;color:var(--muted);padding-right:4px}
+.chev{transition:transform .15s;color:var(--muted);width:16px;height:16px}
+.chev.open{transform:rotate(90deg)}
+.rowbtn{display:grid;place-items:center;width:28px;height:28px;border:0;background:none;border-radius:8px;color:var(--muted);opacity:0}
+.rowbtn:hover{background:var(--line);color:var(--ink)}
+.row:hover .rowbtn,.rowbtn:focus-visible{opacity:1}
+@media (hover:none){.rowbtn{opacity:1}}
+button.note{width:100%;display:grid;gap:1px;text-align:left;border:0;background:none;padding:8px 10px 8px calc(24px + var(--d,0) * 16px);border-radius:9px;color:inherit}
+button.note:hover{background:var(--panel2)}
+button.note.sel{background:var(--accent-soft);box-shadow:inset 3px 0 0 var(--accent)}
+.note .nt{font-size:14.5px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.note .sn{font-size:12.5px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.note .nt.un{color:var(--muted);font-style:italic}
+
+#main{flex:1;min-width:0;display:flex;flex-direction:column}
+.top{display:flex;align-items:center;gap:8px;padding:10px 16px;border-bottom:1px solid var(--line);background:var(--bg)}
+.spacer{flex:1}
+.chip{display:inline-flex;align-items:center;gap:8px;font-size:13px;color:var(--muted);padding:5px 11px;border-radius:999px;background:var(--panel2);white-space:nowrap}
+.chip i{width:8px;height:8px;border-radius:50%;background:var(--ok)}
+.chip.saving i{background:var(--warn)}
+.chip.nosave i{background:var(--danger)}
+.seg{display:inline-flex;background:var(--panel2);border-radius:10px;padding:3px}
+.seg button{border:0;background:none;padding:5px 12px;border-radius:8px;font-size:13.5px;font-weight:600;color:var(--muted)}
+.seg button[aria-pressed=true]{background:var(--panel);color:var(--ink);box-shadow:0 1px 2px rgba(0,0,0,.12)}
+.top .sm{display:inline-flex;align-items:center;gap:7px}
+#tcount:not(:empty){background:var(--accent);color:var(--accent-ink);border-radius:999px;font-size:11.5px;padding:0 6px;line-height:18px}
+.only-mobile{display:none}
+.scroll{flex:1;overflow:auto}
+#doc{max-width:740px;margin:0 auto;padding:36px 28px 96px}
+.title{width:100%;border:0;background:none;padding:0;font:700 36px/1.15 var(--ui);letter-spacing:-.025em;color:var(--ink);outline:0}
+.title::placeholder{color:var(--muted);opacity:.6}
+.meta{display:flex;align-items:center;gap:16px;flex-wrap:wrap;margin:12px 0 22px;font-size:13.5px;color:var(--muted)}
+.pick{display:inline-flex;align-items:center;gap:8px}
+.pick select{width:auto;padding:5px 28px 5px 10px;font-size:13.5px;background-color:var(--panel)}
+.body,.read{font-family:var(--doc);font-size:17.5px;line-height:1.75;color:var(--ink)}
+.body{width:100%;min-height:320px;border:0;background:none;padding:0;resize:none;outline:0;display:block;caret-color:var(--accent)}
+.body::placeholder{color:var(--muted);opacity:.7}
+.read h1,.read h2,.read h3{font-family:var(--ui);letter-spacing:-.02em;line-height:1.25;margin:1.6em 0 .5em}
+.read h1{font-size:28px}.read h2{font-size:22px}.read h3{font-size:18px}
+.read p{margin:0 0 1em}
+.read ul,.read ol{padding-left:1.4em;margin:0 0 1em}
+.read ul.tasks{list-style:none;padding-left:0}
+.read .task label{display:flex;gap:10px;align-items:baseline;cursor:pointer}
+.read .task input{accent-color:var(--accent);transform:translateY(2px)}
+.read .task input:checked + span{color:var(--muted);text-decoration:line-through}
+.read code{font-family:var(--mono);font-size:.86em;background:var(--panel2);padding:2px 6px;border-radius:6px}
+.read pre{background:var(--panel2);padding:14px 16px;border-radius:12px;overflow-x:auto;margin:0 0 1em}
+.read pre code{background:none;padding:0}
+.read blockquote{margin:0 0 1em;padding:2px 0 2px 16px;border-left:3px solid var(--accent);color:var(--muted)}
+.read hr{border:0;border-top:1px solid var(--line);margin:1.6em 0}
+.read a{color:var(--accent)}
+.empty{text-align:center;padding:14vh 12px 0}
+.empty h2{font-size:24px;margin:0 0 6px;letter-spacing:-.02em}
+.empty p{color:var(--muted);margin:0 0 18px}
+
+/* thoughts */
+#thoughts{width:0;flex:none;overflow:hidden;background:var(--panel);border-left:0 solid var(--line);transition:width .2s ease}
+#app.show-t #thoughts{width:350px;border-left-width:1px}
+.t-inner{width:350px;height:100%;display:flex;flex-direction:column}
+.t-head{display:flex;align-items:center;justify-content:space-between;padding:14px 12px 4px 18px}
+.t-head h2{margin:0;font-size:18px;letter-spacing:-.01em}
+.t-lead{margin:0;padding:0 18px 12px;color:var(--muted);font-size:13.5px}
+#tlist{flex:1;overflow:auto;padding:4px 14px 10px;display:flex;flex-direction:column;gap:10px}
+.thought{background:var(--panel2);border-radius:14px 14px 14px 4px;padding:10px 12px;position:relative}
+.thought p{margin:0;white-space:pre-wrap;overflow-wrap:anywhere;font-size:14.5px}
+.thought time{display:block;margin-top:4px;font-size:12px;color:var(--muted)}
+.thought .x{position:absolute;top:4px;right:4px;width:26px;height:26px;opacity:0}
+.thought:hover .x,.thought .x:focus-visible{opacity:1}
+@media (hover:none){.thought .x{opacity:1}}
+.t-empty{color:var(--muted);font-size:14px;padding:6px 4px}
+.tcomp{display:grid;gap:8px;padding:12px 14px calc(14px + env(safe-area-inset-bottom,0px));border-top:1px solid var(--line)}
+.tcomp textarea{resize:none;min-height:64px}
+.tcomp .primary{justify-self:end}
+
+/* attachments */
+.atts{margin-top:44px;padding-top:22px;border-top:1px solid var(--line)}
+.atts-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+.atts-head h3{margin:0;font-size:16px;letter-spacing:-.01em}
+.att-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px}
+.att{background:var(--panel);border:1px solid var(--line);border-radius:14px;overflow:hidden;display:flex;flex-direction:column}
+.att-media{aspect-ratio:4/3;background:var(--panel2);display:grid;place-items:center;overflow:hidden}
+.att-media img{width:100%;height:100%;object-fit:cover;display:block;cursor:zoom-in}
+.att-media video{width:100%;height:100%;object-fit:contain;background:#000;display:block}
+.att-media audio{width:92%}
+.att-ph{padding:12px;text-align:center;font-size:13px;color:var(--muted);display:grid;justify-items:center;gap:4px}
+.att-ext{font:600 15px var(--ui);color:var(--accent)}
+.att-info{padding:10px 12px 2px;display:grid}
+.att-name{font-weight:600;font-size:13.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.att-size{font-size:12px;color:var(--muted)}
+.att-actions{display:flex;gap:2px;padding:2px 6px 8px}
+.att-hint,.att-empty{font-size:13px;color:var(--muted);margin:12px 0 0}
+.att-empty{margin:0 0 4px}
+#scroll.drag{outline:2px dashed var(--accent);outline-offset:-10px;background:var(--accent-soft)}
+dialog.viewer{width:auto;max-width:94vw;padding:12px;background:var(--panel)}
+dialog.viewer img{display:block;max-width:100%;max-height:78vh;margin:0 auto;border-radius:10px}
+dialog.viewer .dlg-actions{margin-top:10px}
+
+#scrim{position:fixed;inset:0;background:rgba(8,10,18,.5);z-index:8;display:none}
+.menu{position:fixed;z-index:30;background:var(--panel);border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow);padding:5px;min-width:170px}
+.menu button{display:block;width:100%;text-align:left;border:0;background:none;padding:9px 12px;border-radius:8px;font-size:14px}
+.menu button:hover{background:var(--panel2)}
+.menu .danger{color:var(--danger)}
+
+dialog{border:1px solid var(--line);border-radius:18px;background:var(--panel);color:var(--ink);padding:24px;width:min(460px,calc(100% - 32px));box-shadow:var(--shadow)}
+dialog::backdrop{background:rgba(8,10,18,.55)}
+dialog h2{margin:0 0 6px;font-size:20px;letter-spacing:-.01em}
+dialog p{margin:0 0 14px;color:var(--muted);font-size:14px}
+.dlg-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:18px}
+#vaultDlg{width:min(580px,calc(100% - 32px));max-height:88vh}
+.vsec{padding:16px 0;border-top:1px solid var(--line)}
+.vsec:first-of-type{border-top:0;padding-top:6px}
+.vsec h3{margin:0 0 4px;font-size:15.5px}
+textarea.field{font:12px/1.5 var(--mono);height:96px;resize:vertical;word-break:break-all}
+.vrow{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+.toast{position:fixed;left:50%;bottom:calc(24px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:12px;font-size:14px;z-index:40;max-width:calc(100% - 32px)}
+
+@media (max-width:1179px){
+  #thoughts{position:fixed;top:0;right:0;bottom:0;width:min(370px,100%)!important;padding-top:env(safe-area-inset-top,0px);border-left:1px solid var(--line);transform:translateX(102%);transition:transform .22s ease;z-index:10;box-shadow:var(--shadow)}
+  #app.show-t #thoughts{transform:none}
+  .t-inner{width:100%}
+  #app.show-t #scrim{display:block}
+}
+@media (max-width:860px){
+  #side{position:fixed;top:0;left:0;bottom:0;width:min(320px,86vw);z-index:9;transform:translateX(-105%);padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);box-shadow:var(--shadow)}
+  #app.nav-open #side{transform:none}
+  #app.nav-open #scrim{display:block}
+  .only-mobile{display:inline-grid}
+  #doc{padding:24px 18px 80px}
+  .title{font-size:28px}
+  .body,.read{font-size:17px}
+}
+@media (max-width:560px){
+  .top{padding:8px 10px;gap:6px}
+  .chip span,.top .lbl{display:none}
+  .chip{padding:9px}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+</head>
+<body>
+
+<!-- Lock screen -->
+<div id="lock" class="lock">
+  <pre id="cipherBg" aria-hidden="true"></pre>
+  <div class="lock-card">
+    <div class="mark" data-ic="lock"></div>
+    <h1 id="lockTitle"></h1>
+    <p class="lead" id="lockLead"></p>
+    <div class="field">
+      <label for="pw">Passphrase</label>
+      <div class="pwrow">
+        <input id="pw" type="password" autocomplete="current-password" spellcheck="false">
+        <button type="button" id="pwShow" class="ghost">Show</button>
+      </div>
+    </div>
+    <div class="field" id="pw2wrap" hidden>
+      <label for="pw2">Repeat passphrase</label>
+      <input id="pw2" type="password" autocomplete="new-password" spellcheck="false">
+    </div>
+    <div class="warnbox" id="warnbox" hidden><b>There is no reset.</b> If you lose this passphrase, your notes can't be recovered by anyone. Pick a few random words you'll remember.</div>
+    <p class="msg" id="lockMsg" role="alert"></p>
+    <button type="button" id="lockGo" class="primary">Unlock</button>
+    <div class="lock-links">
+      <button type="button" id="forgot" class="link">Forgot your passphrase?</button>
+      <button type="button" id="restoreLink" class="link">Restore from backup</button>
+    </div>
+    <div id="forgotBox" hidden>
+      Encryption means nobody, including this page, can open the vault without it. You can erase the vault and start fresh, or restore a backup you saved earlier.
+      <div class="vrow"><button type="button" id="eraseLock" class="danger-btn">Erase vault on this device</button></div>
+    </div>
+  </div>
+</div>
+
+<!-- App -->
+<div id="app" hidden>
+  <div id="scrim"></div>
+  <aside id="side" aria-label="Library">
+    <div class="side-head">
+      <div class="brand">Hush App</div>
+      <button id="lockBtn" class="icon" data-ic="lock" title="Lock now" aria-label="Lock now"></button>
+    </div>
+    <div class="search" data-ic="search"><input id="q" type="search" placeholder="Search notes" aria-label="Search notes" autocomplete="off"></div>
+    <div class="side-actions">
+      <button id="newNote" class="primary sm">New note</button>
+      <button id="newFolder" class="soft sm">New folder</button>
+    </div>
+    <nav id="tree" aria-label="Folders and notes"></nav>
+    <div class="side-foot">
+      <button id="themeBtn" class="icon" aria-label="Switch theme" title="Switch theme"></button>
+      <button id="vaultBtn" class="soft sm">Backup and vault</button>
+    </div>
+  </aside>
+
+  <main id="main">
+    <header class="top">
+      <button id="menuBtn" class="icon only-mobile" data-ic="menu" aria-label="Open library"></button>
+      <span id="status" class="chip"><i></i><span>Encrypted</span></span>
+      <span class="spacer"></span>
+      <div class="seg" role="group" aria-label="Note mode">
+        <button type="button" data-m="write" aria-pressed="true">Write</button>
+        <button type="button" data-m="read" aria-pressed="false">Read</button>
+      </div>
+      <button id="thoughtsBtn" class="soft sm" aria-controls="thoughts"><span data-ic="msg" style="display:inline-flex"></span><span class="lbl">Thoughts</span><span id="tcount"></span></button>
+      <button id="delBtn" class="icon" data-ic="trash" title="Delete note" aria-label="Delete note"></button>
+    </header>
+    <div class="scroll" id="scroll"><div id="doc"></div></div>
+  </main>
+
+  <section id="thoughts" aria-label="Thoughts on this note">
+    <div class="t-inner">
+      <div class="t-head"><h2>Thoughts</h2><button id="tClose" class="icon" data-ic="x" aria-label="Close thoughts"></button></div>
+      <p class="t-lead">A running conversation with yourself about this note. Encrypted with the rest of your vault.</p>
+      <div id="tlist"></div>
+      <div class="tcomp">
+        <textarea id="tin" class="field" placeholder="Add a thought, a doubt, or a next step" aria-label="New thought"></textarea>
+        <button id="tadd" class="primary sm">Add thought</button>
+      </div>
+    </div>
+  </section>
+</div>
+
+<!-- Dialogs -->
+<dialog id="askDlg"><form id="askForm"><h2 id="askTitle"></h2><input id="askInput" type="text" maxlength="80" autocomplete="off"><div class="dlg-actions"><button type="button" class="soft" id="askCancel">Cancel</button><button type="submit" class="primary" id="askOk">Save</button></div></form></dialog>
+<dialog id="confDlg"><h2 id="confTitle"></h2><p id="confMsg"></p><div class="dlg-actions"><button type="button" class="soft" id="confNo">Cancel</button><button type="button" class="primary" id="confYes">Confirm</button></div></dialog>
+<dialog id="restoreDlg">
+  <h2>Restore from backup</h2>
+  <p>Choose a full backup file, or paste backup text. It replaces the vault on this device, and you unlock it with the passphrase it was made with.</p>
+  <div class="vrow" style="margin:0 0 10px"><button type="button" class="soft sm" id="restoreFileBtn">Choose backup file</button><input type="file" id="restoreFile" accept=".hush,.json,application/json" hidden></div>
+  <textarea id="restoreIn" class="field" aria-label="Encrypted backup text" spellcheck="false"></textarea>
+  <p id="restoreMsg" class="msg" style="margin:8px 0 0"></p>
+  <div class="dlg-actions"><button type="button" class="soft" id="restoreCancel">Cancel</button><button type="button" class="primary" id="restoreGo">Replace vault</button></div>
+</dialog>
+<dialog id="vaultDlg">
+  <h2>Backup and vault</h2>
+  <div class="vsec">
+    <h3>Backup</h3>
+    <p>The backup text below holds your notes and folders in encrypted form. It does not include attachments. The full backup file includes both. Either one is useless without your passphrase.</p>
+    <textarea id="backupOut" class="field" readonly aria-label="Encrypted backup text"></textarea>
+    <p id="attStats" style="margin:10px 0 0"></p>
+    <div class="vrow"><button type="button" class="primary sm" id="copyBackup">Copy text backup</button><button type="button" class="soft sm" id="fullBackup">Download full backup file</button><button type="button" class="soft sm" id="restoreOpen">Restore from a backup</button></div>
+  </div>
+  <div class="vsec">
+    <h3>How it's protected</h3>
+    <p style="margin:0">Notes are encrypted with AES-256-GCM. The key comes from your passphrase (PBKDF2, 250,000 rounds) and is held in memory only while unlocked. The vault locks itself after 10 minutes without activity. Everything stays in this browser: there is no account and no server, so clearing site data deletes the vault unless you have a backup. Attachments are encrypted with the same key and kept in this browser's file database.</p>
+  </div>
+  <div class="vsec">
+    <h3>Erase</h3>
+    <p>Removes the vault from this device for good.</p>
+    <button type="button" class="danger-btn" id="eraseVault">Erase vault</button>
+  </div>
+  <div class="dlg-actions"><button type="button" class="primary" id="vaultClose">Done</button></div>
+</dialog>
+
+<dialog id="viewDlg" class="viewer" aria-label="Image viewer"><img id="viewImg" alt=""><div class="dlg-actions"><button type="button" class="soft" id="viewClose">Close</button></div></dialog>
+
+<script>
+(function(){
+'use strict';
+
+/* ---------- helpers ---------- */
+const $ = s => document.querySelector(s);
+const $$ = s => Array.from(document.querySelectorAll(s));
+const esc = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+const uid = () => Math.random().toString(36).slice(2,10) + Date.now().toString(36);
+const reduced = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+const P = {
+  lock:'<rect x="5" y="11" width="14" height="9" rx="2.5"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/>',
+  folder:'<path d="M3.5 7.5a2 2 0 0 1 2-2h4l2 2.5h7a2 2 0 0 1 2 2v7.5a2 2 0 0 1-2 2h-13a2 2 0 0 1-2-2z"/>',
+  chev:'<path d="M9 6l6 6-6 6"/>',
+  plus:'<path d="M12 5v14M5 12h14"/>',
+  dots:'<circle cx="5" cy="12" r="1.3"/><circle cx="12" cy="12" r="1.3"/><circle cx="19" cy="12" r="1.3"/>',
+  search:'<circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5"/>',
+  menu:'<path d="M4 7h16M4 12h16M4 17h16"/>',
+  trash:'<path d="M5 7h14M10 7V5h4v2M7 7l1 12h8l1-12"/>',
+  x:'<path d="M6 6l12 12M18 6L6 18"/>',
+  sun:'<circle cx="12" cy="12" r="4"/><path d="M12 3v2M12 19v2M3 12h2M19 12h2M5.6 5.6L7 7M17 17l1.4 1.4M18.4 5.6L17 7M7 17l-1.4 1.4"/>',
+  moon:'<path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/>',
+  msg:'<path d="M5 6h14a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1h-8l-4 3v-3H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1z"/>',
+  file:'<path d="M7 3h7l5 5v12a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z"/><path d="M14 3v5h5"/>'
+};
+const svg = (name, cls) => '<svg class="ic ' + (cls||'') + '" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + P[name] + '</svg>';
+$$('[data-ic]').forEach(el => el.insertAdjacentHTML('afterbegin', svg(el.dataset.ic)));
+
+/* storage with in-memory fallback */
+const mem = {};
+const store = {
+  get(k){ try{ const v = localStorage.getItem(k); if(v !== null) return v; }catch(e){} return mem[k] === undefined ? null : mem[k]; },
+  set(k,v){ mem[k] = v; try{ localStorage.setItem(k,v); return true; }catch(e){ return false; } },
+  del(k){ delete mem[k]; try{ localStorage.removeItem(k); }catch(e){} }
+};
+
+function fmt(ts){
+  const d = Date.now() - ts;
+  if(d < 60000) return 'just now';
+  return new Date(ts).toLocaleString([], {month:'short', day:'numeric', hour:'numeric', minute:'2-digit'});
+}
+function toast(msg){
+  const t = document.createElement('div'); t.className = 'toast'; t.textContent = msg; t.setAttribute('role','status');
+  document.body.appendChild(t); setTimeout(() => t.remove(), 2600);
+}
+
+/* ---------- crypto ---------- */
+const KEY = 'hush.vault.v1', THEME = 'hush.theme';
+const enc = new TextEncoder(), dec = new TextDecoder();
+const toB64 = buf => { const a = new Uint8Array(buf); let s = ''; for(let i=0;i<a.length;i+=0x8000) s += String.fromCharCode.apply(null, a.subarray(i,i+0x8000)); return btoa(s); };
+const fromB64 = s => Uint8Array.from(atob(s), c => c.charCodeAt(0));
+async function derive(pass, salt, iter){
+  const km = await crypto.subtle.importKey('raw', enc.encode(pass), 'PBKDF2', false, ['deriveKey']);
+  return crypto.subtle.deriveKey({name:'PBKDF2', salt, iterations:iter, hash:'SHA-256'}, km, {name:'AES-GCM', length:256}, false, ['encrypt','decrypt']);
+}
+
+/* ---------- state ---------- */
+const S = {key:null, salt:null, iter:250000, vault:null, cur:null, mode:'write', open:new Set(), q:'', exists:false};
+let saveT = null, chain = Promise.resolve();
+
+async function seal(){
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const ct = await crypto.subtle.encrypt({name:'AES-GCM', iv}, S.key, enc.encode(JSON.stringify(S.vault)));
+  return JSON.stringify({v:1, iter:S.iter, salt:toB64(S.salt), iv:toB64(iv), ct:toB64(ct)});
+}
+function setStatus(kind){
+  const el = $('#status'); el.className = 'chip' + (kind==='saving' ? ' saving' : kind==='nosave' ? ' nosave' : '');
+  el.querySelector('span').textContent = kind==='saving' ? 'Saving...' : kind==='nosave' ? 'Not saved: browser storage is blocked' : 'Encrypted and saved';
+}
+function touch(){ setStatus('saving'); clearTimeout(saveT); saveT = setTimeout(persistNow, 500); }
+function persistNow(){
+  clearTimeout(saveT);
+  chain = chain.then(async () => {
+    if(!S.key || !S.vault) return;
+    const s = await seal();
+    S.ok = store.set(KEY, s);
+    setStatus(S.ok ? 'saved' : 'nosave');
+  }).catch(() => setStatus('nosave'));
+  return chain;
+}
+
+/* ---------- vault data ---------- */
+const byId = id => S.vault.notes.find(n => n.id === id);
+const folderById = id => S.vault.folders.find(f => f.id === id);
+function starter(){
+  const now = Date.now();
+  return {
+    folders:[{id:'f-ideas', name:'Ideas', parent:null}],
+    notes:[
+      {id:'n-welcome', title:'Welcome', folder:null, created:now, updated:now, thoughts:[], attachments:[], body:
+"Everything here is encrypted with your passphrase before it is saved, and it stays in this browser.\n\n## Try this\n- [ ] Make a folder from the sidebar\n- [ ] Write a note, then switch to Read\n- [ ] Attach an image or file at the bottom of a note\n- [ ] Open Thoughts and argue with your own idea\n- [ ] Copy an encrypted backup from Backup and vault\n\n## Good to know\n- There is no account, server, or sync. **Keep a backup** of anything that matters.\n- If you forget the passphrase, nobody can recover the notes.\n- Markdown works: # headings, **bold**, *italic*, `code`, lists, and [ ] tasks."},
+      {id:'n-first', title:'My first idea', folder:'f-ideas', created:now-1, updated:now-1, thoughts:[], attachments:[], body:"Write the raw idea here, then use Thoughts to pressure-test it.\n\n- What problem does it solve?\n- Who needs it most?\n- What is the smallest version I could test this week?"}
+    ],
+    last:'n-welcome'
+  };
+}
+
+/* ---------- lock screen ---------- */
+function resolveText(el, final, ms){
+  el.setAttribute('aria-label', final);
+  return new Promise(done => {
+    if(reduced){ el.textContent = final; return done(); }
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz0123456789+/=';
+    const t0 = performance.now();
+    (function tick(now){
+      const p = Math.min(1, (now - t0) / ms);
+      let out = '';
+      for(let i=0;i<final.length;i++){
+        const c = final[i];
+        out += (c === ' ' || i / final.length < p * 1.2 - 0.2) ? c : chars[Math.random()*chars.length|0];
+      }
+      el.textContent = out;
+      if(p < 1) requestAnimationFrame(tick); else { el.textContent = final; done(); }
+    })(t0);
+  });
+}
+function fillCipher(){
+  let t = '';
+  try{ const raw = store.get(KEY); if(raw) t = JSON.parse(raw).ct || ''; }catch(e){}
+  if(!t) t = toB64(crypto.getRandomValues(new Uint8Array(1800)));
+  while(t.length < 3200) t += t;
+  $('#cipherBg').textContent = t.slice(0,3200).replace(/(.{56})/g, '$1\n');
+}
+function showLock(){
+  S.exists = !!store.get(KEY);
+  $('#app').hidden = true; $('#lock').hidden = false;
+  $('#pw').value = ''; $('#pw2').value = ''; $('#lockMsg').textContent = '';
+  $('#pw2wrap').hidden = $('#warnbox').hidden = S.exists;
+  $('#forgotBox').hidden = true;
+  $('#forgot').hidden = !S.exists;
+  $('#pw').autocomplete = S.exists ? 'current-password' : 'new-password';
+  $('#lockGo').textContent = S.exists ? 'Unlock' : 'Create vault';
+  $('#lockLead').textContent = S.exists ? 'Enter your passphrase to decrypt your notes.' : 'Choose a passphrase. It encrypts everything you write, right here in your browser.';
+  fillCipher();
+  resolveText($('#lockTitle'), S.exists ? 'Your notes are locked' : 'Set up your vault', 900);
+  setTimeout(() => $('#pw').focus(), 50);
+}
+function busy(on){ $('#lockGo').disabled = on; if(on) $('#lockGo').textContent = S.exists ? 'Unlocking...' : 'Creating...'; else $('#lockGo').textContent = S.exists ? 'Unlock' : 'Create vault'; }
+function lmsg(t){ $('#lockMsg').textContent = t; }
+
+async function submitLock(){
+  const pass = $('#pw').value; lmsg('');
+  if(!pass) return lmsg('Enter your passphrase.');
+  if(!S.exists){
+    if(pass.length < 8) return lmsg('Use at least 8 characters. A few random words works well.');
+    if(pass !== $('#pw2').value) return lmsg("The two passphrases don't match.");
+    busy(true);
+    try{
+      S.salt = crypto.getRandomValues(new Uint8Array(16)); S.iter = 250000;
+      S.key = await derive(pass, S.salt, S.iter);
+      S.vault = starter();
+      await persistNow(); S.exists = true;
+    }catch(e){ busy(false); return lmsg('Encryption failed in this browser. Try a current version of Chrome, Safari, or Firefox.'); }
+  } else {
+    busy(true);
+    try{
+      const rec = JSON.parse(store.get(KEY));
+      const salt = fromB64(rec.salt);
+      const key = await derive(pass, salt, rec.iter);
+      const pt = await crypto.subtle.decrypt({name:'AES-GCM', iv:fromB64(rec.iv)}, key, fromB64(rec.ct));
+      S.vault = JSON.parse(dec.decode(pt)); S.key = key; S.salt = salt; S.iter = rec.iter;
+    }catch(e){ busy(false); return lmsg("That passphrase doesn't open this vault. Check it and try again."); }
+  }
+  await resolveText($('#lockTitle'), 'Unlocked', 450);
+  busy(false);
+  enterApp();
+}
+
+function enterApp(){
+  S.vault.notes.forEach(n => { if(!n.attachments) n.attachments = []; if(!n.thoughts) n.thoughts = []; });
+  $('#lock').hidden = true; $('#app').hidden = false;
+  $('#pw').value = ''; $('#pw2').value = '';
+  S.q = ''; $('#q').value = ''; S.mode = 'write';
+  S.cur = (S.vault.last && byId(S.vault.last)) ? S.vault.last : (S.vault.notes[0] ? S.vault.notes[0].id : null);
+  S.open = new Set(); if(S.cur) expandTo(byId(S.cur).folder);
+  setStatus(S.ok === false ? 'nosave' : 'saved'); renderAll(); armIdle();
+}
+async function lockNow(){
+  clearTimeout(saveT);
+  if(S.key && S.vault) await persistNow();
+  S.key = null; S.vault = null; S.cur = null;
+  $('#doc').innerHTML = ''; $('#tree').innerHTML = ''; $('#tlist').innerHTML = '';
+  $('#app').classList.remove('nav-open','show-t');
+  closeMenu(); clearTimeout(idleT); revokeUrls();
+  showLock();
+}
+
+/* idle auto-lock */
+let idleT = null;
+function armIdle(){ clearTimeout(idleT); if(S.key) idleT = setTimeout(lockNow, 10*60*1000); }
+['pointerdown','keydown','touchstart','scroll'].forEach(ev => document.addEventListener(ev, () => { if(S.key) armIdle(); }, {passive:true, capture:true}));
+
+/* ---------- dialogs ---------- */
+function askText(title, value, cta){
+  return new Promise(res => {
+    const d = $('#askDlg'); $('#askTitle').textContent = title; $('#askInput').value = value || ''; $('#askOk').textContent = cta || 'Save';
+    let result = null;
+    const form = $('#askForm');
+    const onSubmit = e => { e.preventDefault(); result = $('#askInput').value.trim(); d.close(); };
+    const onCancel = () => d.close();
+    const onClose = () => { form.removeEventListener('submit', onSubmit); $('#askCancel').removeEventListener('click', onCancel); d.removeEventListener('close', onClose); res(result); };
+    form.addEventListener('submit', onSubmit); $('#askCancel').addEventListener('click', onCancel); d.addEventListener('close', onClose);
+    d.showModal(); $('#askInput').focus(); $('#askInput').select();
+  });
+}
+function confirmBox(title, msg, cta, danger){
+  return new Promise(res => {
+    const d = $('#confDlg'); $('#confTitle').textContent = title; $('#confMsg').textContent = msg;
+    const y = $('#confYes'); y.textContent = cta || 'Confirm'; y.className = danger ? 'danger-btn' : 'primary';
+    let result = false;
+    const yes = () => { result = true; d.close(); }, no = () => d.close();
+    const onClose = () => { y.removeEventListener('click', yes); $('#confNo').removeEventListener('click', no); d.removeEventListener('close', onClose); res(result); };
+    y.addEventListener('click', yes); $('#confNo').addEventListener('click', no); d.addEventListener('close', onClose);
+    d.showModal();
+  });
+}
+
+/* menu */
+function closeMenu(){ const m = $('#menu'); if(m) m.remove(); }
+function openMenu(btn, items){
+  closeMenu();
+  const m = document.createElement('div'); m.className = 'menu'; m.id = 'menu'; m.setAttribute('role','menu');
+  items.forEach(it => {
+    const b = document.createElement('button'); b.type = 'button'; b.textContent = it.label; b.setAttribute('role','menuitem');
+    if(it.danger) b.className = 'danger';
+    b.addEventListener('click', () => { closeMenu(); it.fn(); });
+    m.appendChild(b);
+  });
+  document.body.appendChild(m);
+  const r = btn.getBoundingClientRect(), w = m.offsetWidth;
+  m.style.top = (r.bottom + 4) + 'px';
+  m.style.left = Math.max(8, Math.min(r.right - w, innerWidth - w - 8)) + 'px';
+  const outside = e => { if(!e.target.closest('#menu')) closeMenu(); else document.addEventListener('pointerdown', outside, {once:true}); };
+  setTimeout(() => document.addEventListener('pointerdown', outside, {once:true}), 0);
+}
+
+/* ---------- markdown-lite ---------- */
+function inline(s){
+  s = s.replace(/`([^`]+)`/g, '<code>$1</code>');
+  s = s.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+  s = s.replace(/(^|[^*])\*([^*\n]+)\*/g, '$1<em>$2</em>');
+  s = s.replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>');
+  return s;
+}
+function md(src){
+  const lines = esc(src).split('\n'); const out = []; let list = null, inCode = false, code = [];
+  const closeList = () => { if(list){ out.push('</' + list + '>'); list = null; } };
+  for(let i=0;i<lines.length;i++){
+    const l = lines[i]; let m;
+    if(l.startsWith('```')){
+      if(inCode){ out.push('<pre><code>' + code.join('\n') + '</code></pre>'); code = []; inCode = false; }
+      else { closeList(); inCode = true; }
+      continue;
+    }
+    if(inCode){ code.push(l); continue; }
+    if((m = l.match(/^(#{1,3})\s+(.*)/))){ closeList(); out.push('<h' + m[1].length + '>' + inline(m[2]) + '</h' + m[1].length + '>'); }
+    else if(/^---+\s*$/.test(l)){ closeList(); out.push('<hr>'); }
+    else if((m = l.match(/^&gt;\s?(.*)/))){ closeList(); out.push('<blockquote>' + inline(m[1]) + '</blockquote>'); }
+    else if((m = l.match(/^\s*[-*]\s+\[( |x|X)\]\s+(.*)/))){
+      if(list !== 'ul'){ closeList(); out.push('<ul class="tasks">'); list = 'ul'; }
+      out.push('<li class="task"><label><input type="checkbox" data-line="' + i + '"' + (m[1] !== ' ' ? ' checked' : '') + '><span>' + inline(m[2]) + '</span></label></li>');
+    }
+    else if((m = l.match(/^\s*[-*]\s+(.*)/))){ if(list !== 'ul'){ closeList(); out.push('<ul>'); list = 'ul'; } out.push('<li>' + inline(m[1]) + '</li>'); }
+    else if((m = l.match(/^\s*\d+[.)]\s+(.*)/))){ if(list !== 'ol'){ closeList(); out.push('<ol>'); list = 'ol'; } out.push('<li>' + inline(m[1]) + '</li>'); }
+    else if(!l.trim()){ closeList(); }
+    else { closeList(); out.push('<p>' + inline(l) + '</p>'); }
+  }
+  closeList();
+  if(inCode) out.push('<pre><code>' + code.join('\n') + '</code></pre>');
+  return out.join('');
+}
+
+/* ---------- rendering ---------- */
+function expandTo(fid){ while(fid){ S.open.add(fid); const f = folderById(fid); fid = f ? f.parent : null; } }
+function snip(n, q){
+  let b = n.body.replace(/[#*`>\[\]-]/g, ' ').replace(/\s+/g, ' ').trim();
+  if(q){ const i = b.toLowerCase().indexOf(q); if(i > 30) b = '...' + b.slice(i - 25); }
+  return b.slice(0, 70);
+}
+function noteRow(n, depth, q){
+  return '<button type="button" class="note' + (n.id === S.cur ? ' sel' : '') + '" style="--d:' + depth + '" data-nid="' + n.id + '">' +
+    '<span class="nt' + (n.title ? '' : ' un') + '">' + esc(n.title || 'Untitled') + '</span>' +
+    '<span class="sn">' + esc(snip(n, q) || 'No text yet') + '</span></button>';
+}
+function folderRow(f, depth, open, cnt){
+  return '<div class="row" style="--d:' + depth + '" data-fid="' + f.id + '">' +
+    '<button type="button" class="rowmain" data-act="toggle" aria-expanded="' + open + '">' + svg('chev', 'chev' + (open ? ' open' : '')) + svg('folder') +
+    '<span class="nm">' + esc(f.name) + '</span><span class="ct">' + cnt + '</span></button>' +
+    '<button type="button" class="rowbtn" data-act="addnote" title="New note in this folder" aria-label="New note in ' + esc(f.name) + '">' + svg('plus') + '</button>' +
+    '<button type="button" class="rowbtn" data-act="menu" title="Folder options" aria-label="Options for ' + esc(f.name) + '">' + svg('dots') + '</button></div>';
+}
+function renderTree(){
+  if(!S.vault) return;
+  const t = $('#tree'), v = S.vault, q = S.q.trim().toLowerCase();
+  if(q){
+    const hits = v.notes.filter(n => (n.title + ' ' + n.body).toLowerCase().includes(q));
+    t.innerHTML = hits.length ? hits.map(n => noteRow(n, 0, q)).join('') : '<p class="faint pad">No notes match "' + esc(S.q) + '".</p>';
+    return;
+  }
+  let html = '';
+  const walk = (parent, depth) => {
+    v.folders.filter(f => f.parent === parent).sort((a,b) => a.name.localeCompare(b.name)).forEach(f => {
+      const open = S.open.has(f.id), kids = v.notes.filter(n => n.folder === f.id);
+      html += folderRow(f, depth, open, kids.length);
+      if(open){ walk(f.id, depth + 1); kids.sort((a,b) => b.created - a.created).forEach(n => html += noteRow(n, depth + 1)); }
+    });
+  };
+  walk(null, 0);
+  v.notes.filter(n => !n.folder).sort((a,b) => b.created - a.created).forEach(n => html += noteRow(n, 0));
+  t.innerHTML = html || '<p class="faint pad">Empty for now. Start with a new note or a folder.</p>';
+}
+function folderOptions(sel){
+  let html = '<option value="">No folder</option>';
+  const walk = (parent, depth) => {
+    S.vault.folders.filter(f => f.parent === parent).sort((a,b) => a.name.localeCompare(b.name)).forEach(f => {
+      html += '<option value="' + f.id + '"' + (f.id === sel ? ' selected' : '') + '>' + '\u00A0\u00A0'.repeat(depth) + esc(f.name) + '</option>';
+      walk(f.id, depth + 1);
+    });
+  };
+  walk(null, 0); return html;
+}
+function autosize(ta){ ta.style.height = 'auto'; ta.style.height = Math.max(ta.scrollHeight, 320) + 'px'; }
+function syncTop(){
+  const has = !!byId(S.cur);
+  $('#delBtn').disabled = $('#thoughtsBtn').disabled = !has;
+  $$('.seg button').forEach(b => { b.disabled = !has; b.setAttribute('aria-pressed', String(b.dataset.m === S.mode)); });
+  const n = has ? byId(S.cur) : null;
+  $('#tcount').textContent = n && n.thoughts.length ? n.thoughts.length : '';
+}
+function renderDoc(){
+  const n = byId(S.cur), doc = $('#doc');
+  revokeUrls();
+  syncTop();
+  if(!n){
+    doc.innerHTML = '<div class="empty"><h2>Nothing open</h2><p>Pick a note from the library, or start a new one.</p><button type="button" class="primary" id="emptyNew">New note</button></div>';
+    return;
+  }
+  doc.innerHTML =
+    '<input id="title" class="title" placeholder="Untitled" value="' + esc(n.title) + '" aria-label="Note title" autocomplete="off">' +
+    '<div class="meta"><label class="pick"><span>In</span><select id="folderSel" aria-label="Folder">' + folderOptions(n.folder) + '</select></label><span id="when">Edited ' + fmt(n.updated) + '</span></div>' +
+    (S.mode === 'write'
+      ? '<textarea id="body" class="body" placeholder="Write anything. Markdown works: # headings, **bold**, - lists, - [ ] tasks." aria-label="Note text"></textarea>'
+      : '<article id="read" class="read">' + (n.body.trim() ? md(n.body) : '<p class="faint">Nothing written yet. Switch to Write to start.</p>') + '</article>') + attsHtml();
+  const bodyEl = $('#body');
+  if(bodyEl){ bodyEl.value = n.body; autosize(bodyEl); }
+  renderAtts();
+}
+function renderThoughts(){
+  const n = byId(S.cur), box = $('#tlist');
+  if(!n){ box.innerHTML = ''; return; }
+  box.innerHTML = n.thoughts.length
+    ? n.thoughts.map(t => '<div class="thought"><p>' + esc(t.text) + '</p><time>' + fmt(t.ts) + '</time><button type="button" class="icon x" data-tid="' + t.id + '" aria-label="Delete thought">' + svg('x') + '</button></div>').join('')
+    : '<p class="t-empty">Nothing here yet. Question the idea, list your doubts, or note what to try next.</p>';
+  box.scrollTop = box.scrollHeight;
+}
+function renderAll(){ renderTree(); renderDoc(); renderThoughts(); }
+
+/* ---------- attachments ---------- */
+const MAXF = 50 * 1024 * 1024, IMG_AUTO = 20 * 1024 * 1024;
+let dbp = null;
+function idb(){
+  if(!dbp){
+    dbp = new Promise((res, rej) => {
+      let r; try{ r = indexedDB.open('hush-files', 1); }catch(e){ return rej(e); }
+      r.onupgradeneeded = () => r.result.createObjectStore('files', {keyPath:'id'});
+      r.onsuccess = () => res(r.result);
+      r.onerror = () => rej(r.error);
+    }).catch(e => { dbp = null; throw e; });
+  }
+  return dbp;
+}
+const idbTx = (mode, fn) => idb().then(db => new Promise((res, rej) => {
+  const t = db.transaction('files', mode), rq = fn(t.objectStore('files'));
+  t.oncomplete = () => res(rq && rq.result);
+  t.onerror = () => rej(t.error); t.onabort = () => rej(t.error);
+}));
+const idbPut = rec => idbTx('readwrite', s => s.put(rec));
+const idbGet = id => idbTx('readonly', s => s.get(id));
+const idbDel = id => idbTx('readwrite', s => s.delete(id));
+const idbClear = () => idbTx('readwrite', s => s.clear());
+const idbAll = () => idbTx('readonly', s => s.getAll());
+
+const urls = new Map();
+function revokeUrls(){ urls.forEach(u => URL.revokeObjectURL(u)); urls.clear(); }
+const fmtSize = b => b < 1024 ? b + ' B' : b < 1048576 ? Math.round(b / 1024) + ' KB' : (b / 1048576).toFixed(1) + ' MB';
+const safeType = a => /^(image|video|audio)\/[\w.+-]+$/i.test(a.type || '') ? a.type : 'application/octet-stream';
+const kind = a => /^image\//i.test(a.type) ? 'image' : /^video\//i.test(a.type) ? 'video' : /^audio\//i.test(a.type) ? 'audio' : 'file';
+
+function attsHtml(){
+  return '<section class="atts" aria-label="Attachments"><div class="atts-head"><h3>Attachments</h3><button type="button" class="soft sm" id="addFiles">Add files</button><input type="file" id="fileIn" multiple hidden></div>' +
+    '<div id="attGrid" class="att-grid"></div><p class="att-hint">Drop files here, paste an image, or use Add files. Up to 50 MB each. Encrypted before they are stored on this device.</p></section>';
+}
+function cardHtml(a){
+  const k = kind(a), id = a.id;
+  let media;
+  if(k === 'image' && a.size <= IMG_AUTO) media = '<div class="att-ph">Loading...</div>';
+  else if(k !== 'file') media = '<button type="button" class="soft sm" data-aact="load" data-aid="' + id + '">Load ' + k + '</button>';
+  else media = '<div class="att-ph">' + svg('file') + '<span class="att-ext">' + esc(a.name.indexOf('.') > 0 ? '.' + a.name.split('.').pop().slice(0, 6) : 'file') + '</span></div>';
+  return '<div class="att"><div class="att-media" data-media="' + id + '">' + media + '</div>' +
+    '<div class="att-info"><span class="att-name" title="' + esc(a.name) + '">' + esc(a.name) + '</span><span class="att-size">' + fmtSize(a.size) + '</span></div>' +
+    '<div class="att-actions"><button type="button" class="ghost sm" data-aact="download" data-aid="' + id + '">Download</button><button type="button" class="ghost sm" data-aact="remove" data-aid="' + id + '">Remove</button></div></div>';
+}
+function renderAtts(){
+  const grid = $('#attGrid'), n = byId(S.cur);
+  if(!grid || !n) return;
+  grid.innerHTML = n.attachments.length ? n.attachments.map(cardHtml).join('') : '<p class="att-empty">No attachments yet.</p>';
+  n.attachments.forEach(a => { if(kind(a) === 'image' && a.size <= IMG_AUTO) loadMedia(a); });
+}
+async function decryptAtt(a){
+  try{
+    const rec = await idbGet(a.id); if(!rec) return null;
+    const pt = await crypto.subtle.decrypt({name:'AES-GCM', iv:rec.iv}, S.key, rec.ct);
+    return new Blob([pt], {type:safeType(a)});
+  }catch(e){ return null; }
+}
+async function loadMedia(a){
+  const blob = await decryptAtt(a);
+  const box = document.querySelector('[data-media="' + a.id + '"]');
+  if(!box) return;
+  if(!blob){ box.innerHTML = '<div class="att-ph">This file is missing on this device. A full backup file can bring it back.</div>'; return; }
+  if(!urls.has(a.id)) urls.set(a.id, URL.createObjectURL(blob));
+  const u = urls.get(a.id), k = kind(a);
+  if(k === 'image') box.innerHTML = '<img src="' + u + '" alt="' + esc(a.name) + '" data-aact="view" data-aid="' + a.id + '">';
+  else if(k === 'video') box.innerHTML = '<video src="' + u + '" controls preload="metadata" playsinline></video>';
+  else if(k === 'audio') box.innerHTML = '<audio src="' + u + '" controls></audio>';
+}
+async function addFiles(list){
+  const n = byId(S.cur); if(!n || !S.key) return;
+  let added = 0;
+  for(const f of Array.from(list)){
+    if(f.size > MAXF){ toast('"' + f.name + '" is over 50 MB, so it was skipped.'); continue; }
+    try{
+      const id = uid(), buf = await f.arrayBuffer(), iv = crypto.getRandomValues(new Uint8Array(12));
+      const ct = await crypto.subtle.encrypt({name:'AES-GCM', iv}, S.key, buf);
+      await idbPut({id, iv, ct});
+      n.attachments.push({id, name:f.name || 'pasted-file', type:f.type || 'application/octet-stream', size:f.size, ts:Date.now()});
+      added++;
+    }catch(e){ toast('Could not store "' + f.name + '". Your browser storage may be full.'); }
+  }
+  if(added){
+    n.updated = Date.now(); touch(); renderAtts();
+    toast(added + (added === 1 ? ' file' : ' files') + ' added and encrypted.');
+    try{ if(navigator.storage && navigator.storage.persist) navigator.storage.persist(); }catch(e){}
+  }
+}
+async function downloadAtt(a){
+  const blob = await decryptAtt(a);
+  if(!blob) return toast('This file is missing on this device.');
+  const u = URL.createObjectURL(blob), l = document.createElement('a');
+  l.href = u; l.download = a.name; document.body.appendChild(l); l.click(); l.remove();
+  setTimeout(() => URL.revokeObjectURL(u), 15000);
+}
+async function removeAtt(n, a){
+  const ok = await confirmBox('Remove this file?', '"' + a.name + '" is deleted from this note and from this device.', 'Remove file', true);
+  if(!ok) return;
+  try{ await idbDel(a.id); }catch(e){}
+  n.attachments = n.attachments.filter(x => x.id !== a.id);
+  const u = urls.get(a.id); if(u){ URL.revokeObjectURL(u); urls.delete(a.id); }
+  n.updated = Date.now(); touch(); renderAtts();
+}
+function viewImg(a){
+  const u = urls.get(a.id); if(!u) return;
+  $('#viewImg').src = u; $('#viewImg').alt = a.name; $('#viewDlg').showModal();
+}
+function attStats(){ let c = 0, b = 0; S.vault.notes.forEach(n => (n.attachments || []).forEach(a => { c++; b += a.size; })); return {c, b}; }
+async function downloadFull(){
+  await persistNow();
+  const files = await idbAll(), used = new Set();
+  S.vault.notes.forEach(n => (n.attachments || []).forEach(a => used.add(a.id)));
+  const parts = ['{"hush":1,"vault":', JSON.stringify(store.get(KEY)), ',"files":['];
+  let first = true;
+  files.forEach(f => { if(!used.has(f.id)) return; parts.push((first ? '' : ',') + JSON.stringify({id:f.id, iv:toB64(f.iv), ct:toB64(f.ct)})); first = false; });
+  parts.push(']}');
+  const u = URL.createObjectURL(new Blob(parts, {type:'application/json'})), l = document.createElement('a');
+  l.href = u; l.download = 'hush-backup-' + new Date().toISOString().slice(0, 10) + '.hush';
+  document.body.appendChild(l); l.click(); l.remove(); setTimeout(() => URL.revokeObjectURL(u), 15000);
+}
+
+/* ---------- actions ---------- */
+function select(id, focusTitle){
+  S.cur = id; if(id) S.vault.last = id;
+  $('#app').classList.remove('nav-open');
+  renderAll();
+  if(focusTitle && $('#title')) $('#title').focus();
+  if(id) touch();
+}
+function newNote(folder){
+  const n = {id:uid(), title:'', body:'', folder:folder || null, created:Date.now(), updated:Date.now(), thoughts:[], attachments:[]};
+  S.vault.notes.unshift(n);
+  if(folder) expandTo(folder);
+  S.mode = 'write'; S.q = ''; $('#q').value = '';
+  select(n.id, true);
+}
+async function newFolder(parent){
+  const name = await askText(parent ? 'New subfolder' : 'New folder', '', 'Create');
+  if(!name) return;
+  const f = {id:uid(), name, parent:parent || null};
+  S.vault.folders.push(f); if(parent) S.open.add(parent); S.open.add(f.id);
+  touch(); renderTree(); renderDoc();
+}
+async function renameFolder(f){
+  const name = await askText('Rename folder', f.name, 'Save');
+  if(!name) return;
+  f.name = name; touch(); renderTree(); renderDoc();
+}
+async function deleteFolder(f){
+  const ok = await confirmBox('Delete "' + f.name + '"?', 'The folder is removed. Notes and subfolders inside move up one level.', 'Delete folder', true);
+  if(!ok) return;
+  S.vault.folders.forEach(x => { if(x.parent === f.id) x.parent = f.parent; });
+  S.vault.notes.forEach(n => { if(n.folder === f.id) n.folder = f.parent; });
+  S.vault.folders = S.vault.folders.filter(x => x.id !== f.id);
+  touch(); renderTree(); renderDoc();
+}
+async function deleteNote(){
+  const n = byId(S.cur); if(!n) return;
+  const ok = await confirmBox('Delete this note?', '"' + (n.title || 'Untitled') + '" and its thoughts will be gone for good.', 'Delete note', true);
+  if(!ok) return;
+  (n.attachments || []).forEach(a => idbDel(a.id).catch(() => {}));
+  S.vault.notes = S.vault.notes.filter(x => x.id !== n.id);
+  S.cur = null; S.vault.last = null; touch(); renderAll();
+}
+function addThought(){
+  const n = byId(S.cur), ta = $('#tin'), text = ta.value.trim();
+  if(!n || !text) return;
+  n.thoughts.push({id:uid(), text, ts:Date.now()}); ta.value = '';
+  touch(); renderThoughts(); syncTop();
+}
+
+/* ---------- events ---------- */
+$('#lockGo').addEventListener('click', submitLock);
+['#pw','#pw2'].forEach(s => $(s).addEventListener('keydown', e => { if(e.key === 'Enter') submitLock(); }));
+$('#pwShow').addEventListener('click', () => {
+  const show = $('#pw').type === 'password';
+  $('#pw').type = show ? 'text' : 'password'; $('#pw2').type = show ? 'text' : 'password';
+  $('#pwShow').textContent = show ? 'Hide' : 'Show';
+});
+$('#forgot').addEventListener('click', () => { $('#forgotBox').hidden = !$('#forgotBox').hidden; });
+$('#eraseLock').addEventListener('click', eraseVault);
+$('#restoreLink').addEventListener('click', openRestore);
+
+$('#lockBtn').addEventListener('click', lockNow);
+$('#newNote').addEventListener('click', () => newNote(null));
+$('#newFolder').addEventListener('click', () => newFolder(null));
+$('#menuBtn').addEventListener('click', () => $('#app').classList.add('nav-open'));
+$('#scrim').addEventListener('click', () => $('#app').classList.remove('nav-open','show-t'));
+$('#delBtn').addEventListener('click', deleteNote);
+$('#thoughtsBtn').addEventListener('click', () => { const a = $('#app'); a.classList.toggle('show-t'); if(a.classList.contains('show-t') && innerWidth >= 1180) return; });
+$('#tClose').addEventListener('click', () => $('#app').classList.remove('show-t'));
+$('#tadd').addEventListener('click', addThought);
+$('#tin').addEventListener('keydown', e => { if(e.key === 'Enter' && (e.ctrlKey || e.metaKey)){ e.preventDefault(); addThought(); } });
+$('#tlist').addEventListener('click', e => {
+  const b = e.target.closest('[data-tid]'); if(!b) return;
+  const n = byId(S.cur); n.thoughts = n.thoughts.filter(t => t.id !== b.dataset.tid);
+  touch(); renderThoughts(); syncTop();
+});
+$$('.seg button').forEach(b => b.addEventListener('click', () => { S.mode = b.dataset.m; renderDoc(); }));
+
+$('#q').addEventListener('input', e => { S.q = e.target.value; renderTree(); });
+
+$('#tree').addEventListener('click', e => {
+  const act = e.target.closest('[data-act]'), row = e.target.closest('[data-fid]'), note = e.target.closest('[data-nid]');
+  if(act && row){
+    const f = folderById(row.dataset.fid); if(!f) return;
+    if(act.dataset.act === 'toggle'){ S.open.has(f.id) ? S.open.delete(f.id) : S.open.add(f.id); renderTree(); }
+    else if(act.dataset.act === 'addnote'){ newNote(f.id); }
+    else if(act.dataset.act === 'menu'){
+      openMenu(act, [
+        {label:'Rename', fn:() => renameFolder(f)},
+        {label:'New subfolder', fn:() => newFolder(f.id)},
+        {label:'Delete folder', danger:true, fn:() => deleteFolder(f)}
+      ]);
+    }
+  } else if(note){ select(note.dataset.nid, false); }
+});
+
+$('#doc').addEventListener('input', e => {
+  const n = byId(S.cur); if(!n) return;
+  if(e.target.id === 'title'){ n.title = e.target.value; }
+  else if(e.target.id === 'body'){ n.body = e.target.value; autosize(e.target); }
+  else return;
+  n.updated = Date.now(); const w = $('#when'); if(w) w.textContent = 'Edited just now';
+  touch(); renderTree();
+});
+$('#doc').addEventListener('change', e => {
+  if(e.target.id === 'fileIn'){ const fl = Array.from(e.target.files); e.target.value = ''; addFiles(fl); return; }
+  const n = byId(S.cur); if(!n) return;
+  if(e.target.id === 'folderSel'){ n.folder = e.target.value || null; if(n.folder) expandTo(n.folder); n.updated = Date.now(); touch(); renderTree(); }
+  else if(e.target.matches && e.target.matches('input[data-line]')){
+    const lines = n.body.split('\n'), i = +e.target.dataset.line;
+    lines[i] = lines[i].replace(/\[( |x|X)\]/, e.target.checked ? '[x]' : '[ ]');
+    n.body = lines.join('\n'); n.updated = Date.now(); touch();
+  }
+});
+$('#doc').addEventListener('click', e => {
+  if(e.target.id === 'emptyNew') return newNote(null);
+  if(e.target.closest('#addFiles')) return $('#fileIn').click();
+  const b = e.target.closest('[data-aact]'); if(!b) return;
+  const n = byId(S.cur), a = n && n.attachments.find(x => x.id === b.dataset.aid); if(!a) return;
+  const act = b.dataset.aact;
+  if(act === 'download') downloadAtt(a); else if(act === 'remove') removeAtt(n, a); else if(act === 'load') loadMedia(a); else if(act === 'view') viewImg(a);
+});
+const sc = $('#scroll');
+const hasFiles = e => e.dataTransfer && Array.from(e.dataTransfer.types || []).indexOf('Files') !== -1;
+['dragenter','dragover'].forEach(ev => sc.addEventListener(ev, e => { if(S.key && byId(S.cur) && hasFiles(e)){ e.preventDefault(); sc.classList.add('drag'); } }));
+sc.addEventListener('dragleave', e => { if(!sc.contains(e.relatedTarget)) sc.classList.remove('drag'); });
+sc.addEventListener('drop', e => { sc.classList.remove('drag'); if(S.key && byId(S.cur) && hasFiles(e)){ e.preventDefault(); addFiles(Array.from(e.dataTransfer.files)); } });
+document.addEventListener('paste', e => {
+  if(!S.key || !byId(S.cur) || e.target.id === 'tin' || e.target.id === 'q') return;
+  const fs = e.clipboardData && e.clipboardData.files;
+  if(fs && fs.length){ e.preventDefault(); addFiles(Array.from(fs)); }
+});
+$('#viewClose').addEventListener('click', () => $('#viewDlg').close());
+$('#viewDlg').addEventListener('click', e => { if(e.target.id === 'viewDlg') $('#viewDlg').close(); });
+
+document.addEventListener('keydown', e => {
+  if((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k' && S.vault){ e.preventDefault(); $('#app').classList.add('nav-open'); $('#q').focus(); }
+  if(e.key === 'Escape'){ closeMenu(); $('#app').classList.remove('nav-open'); }
+});
+
+/* theme */
+function applyTheme(t){ if(t === 'light' || t === 'dark') document.documentElement.dataset.theme = t; else delete document.documentElement.dataset.theme; updateThemeBtn(); }
+function effectiveTheme(){ return document.documentElement.dataset.theme || (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'); }
+function updateThemeBtn(){
+  const dark = effectiveTheme() === 'dark', b = $('#themeBtn');
+  b.innerHTML = svg(dark ? 'sun' : 'moon'); b.setAttribute('aria-label', dark ? 'Switch to light theme' : 'Switch to dark theme'); b.title = b.getAttribute('aria-label');
+}
+$('#themeBtn').addEventListener('click', () => { const next = effectiveTheme() === 'dark' ? 'light' : 'dark'; applyTheme(next); store.set(THEME, next); });
+if(window.matchMedia) matchMedia('(prefers-color-scheme: dark)').addEventListener('change', updateThemeBtn);
+
+/* vault dialog: backup, restore, erase */
+async function openVault(){
+  await persistNow();
+  $('#backupOut').value = store.get(KEY) || '';
+  $('#copyBackup').textContent = 'Copy text backup';
+  const st = attStats();
+  $('#attStats').textContent = st.c ? st.c + (st.c === 1 ? ' attachment' : ' attachments') + ' (' + fmtSize(st.b) + ') stored on this device.' : 'No attachments stored yet.';
+  $('#vaultDlg').showModal();
+}
+$('#vaultBtn').addEventListener('click', openVault);
+$('#vaultClose').addEventListener('click', () => $('#vaultDlg').close());
+$('#copyBackup').addEventListener('click', async () => {
+  const ta = $('#backupOut'); let ok = false;
+  try{ await navigator.clipboard.writeText(ta.value); ok = true; }catch(e){}
+  if(!ok){ ta.select(); try{ ok = document.execCommand('copy'); }catch(e){} }
+  $('#copyBackup').textContent = ok ? 'Copied' : 'Select the text and copy it';
+});
+$('#fullBackup').addEventListener('click', downloadFull);
+$('#restoreOpen').addEventListener('click', () => { $('#vaultDlg').close(); openRestore(); });
+$('#eraseVault').addEventListener('click', async () => { $('#vaultDlg').close(); await eraseVault(); });
+
+function openRestore(){ $('#restoreIn').value = ''; $('#restoreMsg').textContent = ''; $('#restoreDlg').showModal(); $('#restoreIn').focus(); }
+$('#restoreCancel').addEventListener('click', () => $('#restoreDlg').close());
+$('#restoreFileBtn').addEventListener('click', () => $('#restoreFile').click());
+$('#restoreFile').addEventListener('change', async e => {
+  const f = e.target.files[0], msg = $('#restoreMsg'); e.target.value = '';
+  if(!f) return;
+  let obj; try{ obj = JSON.parse(await f.text()); }catch(err){}
+  if(obj && obj.hush === 1 && typeof obj.vault === 'string' && Array.isArray(obj.files)) applyRestore(obj.vault, obj.files);
+  else if(obj && obj.salt && obj.iv && obj.ct && obj.iter) applyRestore(JSON.stringify(obj), null);
+  else msg.textContent = "That doesn't look like a Hush App backup file.";
+});
+$('#restoreGo').addEventListener('click', () => {
+  const txt = $('#restoreIn').value.trim(), msg = $('#restoreMsg');
+  let rec; try{ rec = JSON.parse(txt); }catch(e){}
+  if(!rec || !rec.salt || !rec.iv || !rec.ct || !rec.iter){ msg.textContent = "That doesn't look like a Hush App backup. Paste the full text you copied."; return; }
+  applyRestore(txt, null);
+});
+async function applyRestore(recordStr, files){
+  const ok = await confirmBox('Replace this vault?',
+    files ? 'The vault and attachments on this device are replaced by the backup. You will unlock it with the passphrase it was made with.'
+          : 'The vault on this device is replaced by the backup, and any attachments stored here are removed because text backups hold notes only. You will unlock it with the passphrase it was made with.',
+    'Replace vault', true);
+  if(!ok) return;
+  $('#restoreDlg').close();
+  clearTimeout(saveT); clearTimeout(idleT); await chain;
+  S.key = null; S.vault = null; S.cur = null; revokeUrls();
+  $('#doc').innerHTML = ''; $('#tree').innerHTML = ''; $('#tlist').innerHTML = '';
+  try{
+    await idbClear();
+    if(files) for(const f of files) await idbPut({id:f.id, iv:fromB64(f.iv), ct:fromB64(f.ct).buffer});
+  }catch(e){ toast('Could not restore attachments in this browser.'); }
+  store.set(KEY, recordStr); showLock(); toast('Backup loaded. Enter its passphrase to unlock.');
+}
+async function eraseVault(){
+  const ok = await confirmBox('Erase the vault?', 'Every note on this device is deleted permanently. Only an encrypted backup can bring them back.', 'Erase vault', true);
+  if(!ok) return;
+  clearTimeout(saveT); clearTimeout(idleT); await chain;
+  store.del(KEY); await idbClear().catch(() => {}); revokeUrls(); S.key = null; S.vault = null; S.cur = null;
+  $('#doc').innerHTML = ''; $('#tree').innerHTML = ''; $('#tlist').innerHTML = '';
+  showLock(); toast('Vault erased.');
+}
+
+window.addEventListener('beforeunload', () => { if(S.key && S.vault){ clearTimeout(saveT); persistNow(); } });
+
+/* ---------- boot ---------- */
+applyTheme(store.get(THEME));
+if(!(window.crypto && crypto.subtle)){
+  $('#lock').querySelector('.lock-card').innerHTML = '<h1>Encryption unavailable</h1><p class="lead">This browser blocks the Web Crypto API on this page. Open the page over https in a current browser to use Hush App.</p>';
+} else {
+  showLock();
+}
+})();
+</script>
+</body>
+</html>
