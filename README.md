@@ -14,7 +14,7 @@ Hush App is a single-file notes app with folders, Markdown, attachments, and a b
 - **Room for more than text.** Attach images, videos, audio, or any other file to a note, encrypted the same way as everything else.
 - **Built for ideas, not just storage.** Every note has a **Thoughts** panel: a running thread where you question the idea, list your doubts, and write down what to try next, without cluttering the note itself.
 - **Feels good on any screen.** Responsive layout for phone and desktop, light and dark themes, keyboard friendly.
-- **One file.** The whole app is `index.html`. Read it, fork it, host it anywhere, or run it offline from your desktop.
+- **One file.** The whole app is `HushApp.html`. Read it, fork it, host it anywhere, or run it offline from your desktop.
 
 ## How it works
 
